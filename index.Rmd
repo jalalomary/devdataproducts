@@ -1,0 +1,106 @@
+---
+title       : Age Calculator Project
+subtitle    : Shiny project for Developing Data Products course
+author      : Jalal Eddin Omari
+job         : 
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : standalone # {standalone, draft}
+knit        : slidify::knit2slides
+---
+
+## Project Idea
+
+
+Project idea is to host a shiny application to calculate user age.
+
+User has to pick his birth date from date picker and this program will display his age.
+
+Also application will show a simple age plot based on year.
+
+You can test the application by clicking [here](http://jalalomary.shinyapps.io/shiny).
+
+--- .smallCode
+
+## Calculation Code
+<style>
+.smallCode pre{
+  font-size:12px;
+}
+</style>
+```{r}
+age_years <- function(earlier, later)
+{
+  lt <- data.frame(earlier, later)
+  age <- as.numeric(format(lt[,2],format="%Y")) - as.numeric(format(lt[,1],format="%Y"))
+  
+  dayOnLaterYear <- ifelse(format(lt[,1],format="%m-%d")!="02-29",
+                           as.Date(paste(format(lt[,2],format="%Y"),"-",format(lt[,1],format="%m-%d"),sep="")),
+                           ifelse(as.numeric(format(later,format="%Y")) %% 400 == 0 | as.numeric(format(later,format="%Y")) %% 100 != 0 &
+                           as.numeric(format(later,format="%Y")) %% 4 == 0,
+                                  as.Date(paste(format(lt[,2],format="%Y"),"-",format(lt[,1],format="%m-%d"),sep="")),
+                                  as.Date(paste(format(lt[,2],format="%Y"),"-","02-28",sep=""))))
+  
+  age[which(dayOnLaterYear > lt$later)] <- age[which(dayOnLaterYear > lt$later)] - 1
+  
+  age
+}
+```
+Calling Live Example
+
+```{r}
+age_years(as.Date("1990-02-26"),Sys.Date())
+```
+
+--- .smallCode
+
+## ui.R
+```{r eval=FALSE}
+library(shiny)
+
+shinyUI(pageWithSidebar(
+
+  headerPanel("Age Calculator"),
+
+  sidebarPanel(
+    helpText("This simple application will calculate your age, 
+             you can fill your birth date below, 
+             and it will automatically populate the calculated 
+             age and display it on the right side."),
+    dateInput("dob", "Birth Date:", max = Sys.Date() -1, value="1990-01-01")
+  ),
+
+  mainPanel(
+    h3("Your age is: "),
+    verbatimTextOutput("age"),
+    plotOutput("plot")
+  )
+))
+```
+
+--- .smallCode
+
+## server.R
+```{r eval=FALSE}
+library(shiny)
+
+source("age_function.R")
+
+shinyServer(function(input, output) {
+    age <- reactive({age_years(input$dob,Sys.Date())})
+    output$age <- renderText({age()})
+    start_year <- reactive({as.numeric(format(input$dob, "%Y"))})
+    end_year <- reactive({start_year() + age()})
+    output$plot <- renderPlot({
+      plot(c(start_year():end_year()), c(0:age()), xlab="Year", ylab="Age",
+           lines(c(start_year():end_year()), c(0:age()),col="red"))
+      
+    })
+})
+```
+
+### References:
+
+Age Calculation Function by: nzcoops, [http://www.r-bloggers.com/updated-age-calculation-function/](http://www.r-bloggers.com/updated-age-calculation-function/)
